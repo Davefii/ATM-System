@@ -16,7 +16,7 @@ struct sClient
 };
 sClient CurrentClient;
 void MainMenu();
-enum enMainMenuOption { eQuickWithdraw = 1, eNormalWithdraw = 2,eDeposit = 3, eShowBalance = 4, eLogout = 5 };
+enum enMainMenuOption { eQuickWithdraw = 1, eNormalWithdraw = 2, eDeposit = 3, eShowBalance = 4, eLogout = 5 };
 enum enquickwithdraw { Twenty = 1, Fiveteen = 2, oneHundernd = 3, FiveHundernd = 4, FourHundernd = 5, sixHundernd = 6, eightHundernd = 7, onethousen = 8, Backmainmenu = 9 };
 vector<string> SplitString(string S1, string Delim)
 {
@@ -80,27 +80,32 @@ vector <sClient> LoadCleintsDataFromFile(string FileName)
     }
     return vClients;
 }
-sClient SaveClientDataFromFile(string FileName, sClient &Client)
+vector <sClient> SaveClientDataFromFile(string FileName, vector <sClient> vClients)
 {
     fstream bankfile;
     string DataLine;
-    bankfile.open(FileName, ios::out || ios::app);
+    bankfile.open(FileName, ios::out);
     if (bankfile.is_open())
     {
-            if (Client.MarkForDelete == false)
+        for (sClient C : vClients)
+        {
+            if (C.MarkForDelete == false)
             {
-                DataLine = ConvertRecordToLine(Client);
+                DataLine = ConvertRecordToLine(C);
                 bankfile << DataLine << endl;
             }
+        }
         bankfile.close();
     }
-    return Client;
+    return vClients;
 }
+void PerformenceNormalWithdram();
+void ShowQuickWithdraw();
 void Login();
 void ShowBalance()
 {
     cout << "\n--------------------------------------------\n";
-    cout << "\Balance Screen";
+    cout << "\tBalance Screen";
     cout << "\n--------------------------------------------\n";
     cout << CurrentClient.Name << " Your Balance is : " << CurrentClient.AccountBalance << endl;
 }
@@ -110,40 +115,88 @@ void GotoBackMainMenue()
     system("pause>0");
     MainMenu();
 }
-bool DepositAMount(double amount, sClient &Clinet)
+bool DepositBalanceToClientByAccountNumber(string AccountNumber, double amount, vector <sClient>& vClients)
 {
-    char answer = 'n';
-    cout << "Do You Want Deposit " << amount << " Y/N : " << endl;
-    cin >> answer;
-    if (answer == 'y' || answer == 'Y')
+    char Answer = 'n';
+    cout << "\n\nAre you sure you want perform this transaction? y/n ? ";
+    cin >> Answer;
+    if (Answer == 'y' || Answer == 'Y')
     {
-        CurrentClient.AccountBalance += amount;
-        SaveClientDataFromFile(FileClient, Clinet);
-        return true;
+        for (sClient& C : vClients)
+        {
+            if (C.AccountNumber == AccountNumber)
+            {
+                C.AccountBalance += amount;
+                SaveClientDataFromFile(FileClient, vClients);
+                cout << "\n\nDone Successfully. New balance is: " << C.AccountBalance;
+                return true;
+            }
+        }
+        return false;
     }
-    return false;
+}
+double ReadDepositAmount()
+{
+    double amount;
+    cout << "\nEnter a Positive Deposit Amount ?";
+    cin >> amount;
+    while (amount <= 0)
+    {
+        cout << "\nEnter a Positive Deposit Amount ?";
+        cin >> amount;
+    }
+    return amount;
+}
+void PerfromDepositOption()
+{
+    double DepositAmount = ReadDepositAmount();
+    vector <sClient> vClients = LoadCleintsDataFromFile(FileClient);
+    DepositBalanceToClientByAccountNumber(CurrentClient.AccountNumber, DepositAmount, vClients);
+    CurrentClient.AccountBalance += DepositAmount;
 }
 void ShowDeposit()
 {
-    double amount;
     cout << "\n--------------------------------------------\n";
     cout << "\tDeposit Screen";
     cout << "\n--------------------------------------------\n";
-    cout << "Enter How Many Do You Want Deposit : " << endl;
+    PerfromDepositOption();
+}
+int ReadWithDraw()
+{
+    int amount;
+    cout << "\nEnter an Amount multiple of 5's :\n";
     cin >> amount;
-    DepositAMount(amount, CurrentClient);
-    cout << CurrentClient.Name << " Your Balance is : " << CurrentClient.AccountBalance << endl;
+    while (amount % 5 != 0)
+    {
+        cout << "\nEnter an Amount multiple of 5's :\n";
+        cin >> amount;
+    }
+    return amount;
 }
 void ShowNormalWithDram()
 {
-    double amount;
+    system("cls");
     cout << "\n--------------------------------------------\n";
     cout << "\tDeposit Screen";
     cout << "\n--------------------------------------------\n";
-    cout << "Enter How Many Do You Want Deposit : " << endl;
-    cin >> amount;
-    DepositAMount(amount * - 1, CurrentClient);
-    cout << "Your Balance is : " << CurrentClient.AccountBalance << endl;
+    PerformenceNormalWithdram();
+    cout << "Your Balance is " << CurrentClient.AccountBalance << endl;
+}
+void PerformenceNormalWithdram()
+{
+    double amount = ReadWithDraw();
+    if (amount > CurrentClient.AccountBalance)
+    {
+        system("cls");
+        cout << "\nThe amount exceeds your balance, make another choice.\n";
+        cout << "Press Any key to continue...";
+        system("pause>0");
+        ShowNormalWithDram();
+        return;
+    }
+    vector <sClient> vClients;
+    DepositBalanceToClientByAccountNumber(CurrentClient.AccountNumber, amount * -1, vClients);
+    CurrentClient.AccountBalance += amount;
 }
 short readChoise()
 {
@@ -152,88 +205,46 @@ short readChoise()
     cin >> choise;
     return choise;
 }
-void PerfomenceQuickWithdraw(enquickwithdraw quickwithdraw)
+short getQuickWithDrawAmount(short QuickWithDrawOption)
 {
-    double amount = 0;
-    switch (quickwithdraw)
+    switch (QuickWithDrawOption)
     {
-    case Twenty:
-        amount +=20;
-        if (amount > CurrentClient.AccountBalance)
-        {
-            cout << "The Amount Exceeds Your Balance, Make Another Choice. " << endl;
-        }
-        DepositAMount(amount * - 1, CurrentClient);
-        cout << "Your Balance is : " << CurrentClient.AccountBalance << endl;
-        break;
-    case Fiveteen:
-        amount += 50;
-        if (amount > CurrentClient.AccountBalance)
-        {
-            cout << "The Amount Exceeds Your Balance, Make Another Choice. " << endl;
-        }
-        DepositAMount(amount * -1, CurrentClient);
-        cout << "Your Balance is : " << CurrentClient.AccountBalance << endl;
-        break;
-    case oneHundernd:
-        amount += 100;
-        if (amount > CurrentClient.AccountBalance)
-        {
-            cout << "The Amount Exceeds Your Balance, Make Another Choice. " << endl;
-        }
-        DepositAMount(amount * -1, CurrentClient);
-        cout << "Your Balance is : " << CurrentClient.AccountBalance << endl;
-        break;
-    case FiveHundernd:
-        amount += 500;
-        if (amount > CurrentClient.AccountBalance)
-        {
-            cout << "The Amount Exceeds Your Balance, Make Another Choice. " << endl;
-        }
-        DepositAMount(amount * -1, CurrentClient);
-        cout << "Your Balance is : " << CurrentClient.AccountBalance << endl;
-        break;
-    case FourHundernd:
-        amount += 400;
-        if (amount > CurrentClient.AccountBalance)
-        {
-            cout << "The Amount Exceeds Your Balance, Make Another Choice. " << endl;
-        }
-        DepositAMount(amount * -1, CurrentClient);
-        cout << "Your Balance is : " << CurrentClient.AccountBalance << endl;
-        break;
-    case sixHundernd:
-        amount += 600;
-        if (amount > CurrentClient.AccountBalance)
-        {
-            cout << "The Amount Exceeds Your Balance, Make Another Choice. " << endl;
-        }
-        DepositAMount(amount * -1, CurrentClient);
-        cout << "Your Balance is : " << CurrentClient.AccountBalance << endl;
-        break;
-    case eightHundernd:
-        amount += 800;
-        if (amount > CurrentClient.AccountBalance)
-        {
-            cout << "The Amount Exceeds Your Balance, Make Another Choice. " << endl;
-        }
-        DepositAMount(amount * -1, CurrentClient);
-        cout << "Your Balance is : " << CurrentClient.AccountBalance << endl;
-        break;
-    case onethousen:
-        amount += 1000;
-        if (amount > CurrentClient.AccountBalance)
-        {
-            cout << "The Amount Exceeds Your Balance, Make Another Choice. " << endl;
-        }
-        DepositAMount(amount * -1, CurrentClient);
-        cout << "Your Balance is : " << CurrentClient.AccountBalance << endl;
-        break;
-    case Backmainmenu:
-        GotoBackMainMenue();
+    case 1:
+        return 20;
+    case 2:
+        return 50;
+    case 3:
+        return 100;
+    case 4:
+        return 200;
+    case 5:
+        return 400;
+    case 6:
+        return 600;
+    case 7:
+        return 800;
+    case 8:
+        return 1000;
     default:
-        cout << "Invalid input :(" << endl;
+        return 0;
     }
+}
+void PerfromQuickWithdrawOption(short QuickWithdrawOption)
+{
+    if (QuickWithdrawOption == 9)
+        return;
+    short WithDrawBalance = getQuickWithDrawAmount(QuickWithdrawOption);
+    if (WithDrawBalance > CurrentClient.AccountBalance)
+    {
+        cout << "\nThe amount exceeds your balance, make another choice.\n";
+        cout << "Press Any key to continue...";
+        system("pause>0");
+        ShowQuickWithdraw();
+        return;
+    }
+    vector <sClient> vClients = LoadCleintsDataFromFile(FileClient);
+    DepositBalanceToClientByAccountNumber(CurrentClient.AccountNumber, WithDrawBalance * -1, vClients);
+    CurrentClient.AccountBalance -= WithDrawBalance;
 }
 void ShowQuickWithdraw()
 {
@@ -248,7 +259,7 @@ void ShowQuickWithdraw()
     cout << "\t[9] Back To Main Menu\n";
     cout << "===========================================\n";
     cout << "Your Balance is : " << CurrentClient.AccountBalance << endl;
-    PerfomenceQuickWithdraw((enquickwithdraw)readChoise());
+    PerfromQuickWithdrawOption((enquickwithdraw)readChoise());
 }
 short ReadOptionMenu()
 {
